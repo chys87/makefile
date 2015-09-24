@@ -37,11 +37,13 @@ AUTO_GENERATED_PYTHON_DEPS := $(AUTO_GENERATOR_PYTHON:$(DIR)/%.py=$(BUILDDIR)/%.
 AUTO_GENERATOR := $(AUTO_GENERATOR_PYTHON)
 AUTO_GENERATED := $(AUTO_GENERATED_PYTHON)
 AUTO_GENERATED_DEPS := $(AUTO_GENERATED_PYTHON_DEPS)
+AUTO_GENERATED_SRCS := $(filter %.c %.cc %.cpp %.C %.cxx %.S, $(AUTO_GENERATED))
+AUTO_GENERATED_HEADERS := $(filter %.h %.hpp, $(AUTO_GENERATED))
 
 HANDWRITTEN_HEADERS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.h $(x)/*.hpp $(x)/*.h++ $(x)/%.hh $(x)/%.H))
 HANDWRITTEN_SRCS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.c $(x)/*.cc $(x)/*.cpp $(x)/*.C $(x)/*.cxx $(x)/*.S))
 
-SRCS := $(HANDWRITTEN_SRCS) $(AUTO_GENERATED)
+SRCS := $(HANDWRITTEN_SRCS) $(AUTO_GENERATED_SRCS)
 
 ifeq "$(SRCS)" ""
 $(error No source file.)
@@ -71,7 +73,7 @@ DEPS    := $(sort $(CDEPS) $(CXXDEPS) $(ASMDEPS))
 CC := gcc
 CXX := g++
 
-INCLUDES :=
+INCLUDES := $(foreach x,$(AUTO_GENERATED_HEADERS),-iquote $(dir $(x)))
 LIBS :=
 DEFS := -D _GNU_SOURCE -D NDEBUG \
 	-D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS \
@@ -119,7 +121,7 @@ GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings -Wabi \
 	-Werror=overflow \
 	-Werror=parentheses \
 	-Werror=trigraphs \
-	-Werror=pragmas -Werror=unknown-pragmas \
+	-Werror=pragmas -Wunknown-pragmas \
 	-Werror=parentheses \
 	-Werror=strict-aliasing \
 	-Werror=trampolines \
@@ -129,6 +131,7 @@ GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings -Wabi \
 	-Werror=enum-compare \
 	-Wdisabled-optimization \
 	-Wsuggest-attribute=noreturn \
+	-Wdisabled-optimization \
 	-fmax-errors=5
 # TBA when newer GCC is made default:
 #	-Wsuggest-attribute=format
@@ -144,8 +147,10 @@ CXXWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
 	-Werror=reorder \
 	-Werror=conversion-null \
 	-Werror=delete-non-virtual-dtor \
+	-Werror=terminate \
 	-Woverloaded-virtual -Wnon-virtual-dtor
 PIE := 0
+NOPLT := 0
 LTO := 0
 
 # TARGETS: Raw target names
@@ -172,13 +177,18 @@ else
 $(BUILDDIR)/$(1).n.out: private CLINKER = $(CXX)
 endif
 $(BUILDDIR)/$(1).n.out: private NAME := LD
-$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o))
-	$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ $$^ $(LIBS)
+$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(AUTO_GENERATED_HEADERS)
+	$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(LIBS)
 endef
 
 define define_target
 $(call define_target_impl,$(1),$(patsubst %.py,%,$(2)))
 endef
+
+# Make sure headers are generated earlier than everything else
+ifneq "$(AUTO_GENERATED_HEADERS)" ""
+$(OBJS) $(DEPS): | $(AUTO_GENERATED_HEADERS)
+endif
 
 .PHONY:	all install size bincmp purge clean clobber un
 .DEFAULT_GOAL := all
@@ -215,13 +225,19 @@ endif
 ifeq "$(PIE)" "1"
  OPTIMIZEFLAGS += -fpie -pie
 endif
+ifeq "$(NOPLT)" "1"
+ OPTIMIZEFLAGS += -fno-plt
+ ifeq "$(PIE)" "1"
+  OPTIMIZEFLAGS += -fvisibility=hidden
+ endif
+endif
 ifeq "$(NOEXCEPTION)" "1"
  OPTIMIZEFLAGS += -fno-exceptions
 endif
 
 CFLAGS := $(OPTIMIZEFLAGS) $(COPTIMIZEFLAGS) $(ARCHFLAGS) $(CWARNINGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS)
 CXXFLAGS := $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS)
-BASE_LDFLAGS := -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed -Wl,-z,relro
+BASE_LDFLAGS := -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed -Wl,-z,relro -Wl,-z,noexecstack
 LDFLAGS := $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
 
 ifeq "$(DIR)" "."
