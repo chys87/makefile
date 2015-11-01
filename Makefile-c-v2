@@ -190,7 +190,7 @@ ifneq "$(AUTO_GENERATED_HEADERS)" ""
 $(OBJS) $(DEPS): | $(AUTO_GENERATED_HEADERS)
 endif
 
-.PHONY:	all install size bincmp purge clean clobber un
+.PHONY:	all install size bincmp purge clean clobber un compare
 .DEFAULT_GOAL := all
 
 -include Makefile-spec
@@ -362,6 +362,18 @@ tags: private NAME := CTAGS
 tags: $(HANDWRITTEN_SRCS) $(HANDWRITTEN_HEADERS)
 	$(Q)$(CTAGS) $(HANDWRITTEN_SRCS:./%=%) $(HANDWRITTEN_HEADERS:./%=%)
 endif
+
+# compare
+AUTO_GENERATED_EXIST := $(wildcard $(AUTO_GENERATED))
+AUTO_GENERATED_EXIST_BAK := $(wildcard $(AUTO_GENERATED_EXIST:%=%.bak))
+AUTO_GENERATED_COMPARE := $(AUTO_GENERATED_EXIST_BAK:%.bak=%)
+
+compare:
+	$(Q)for x in $(AUTO_GENERATED); do \
+		if [ -f $$x -a -f $$x.bak ] && ! cmp -s $$x.bak $$x; then \
+			colordiff -u $$x.bak $$x | less -R; \
+		fi \
+	done
 
 # For "make clean", don't include dependency files
 # For "make .xxx.o", include only ".xxx.P"
