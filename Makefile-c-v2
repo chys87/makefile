@@ -98,7 +98,7 @@ OPTIMIZEFLAGS ?= -O2 \
 #				 -fweb -funsafe-loop-optimizations \
 # -Wunsafe-loop-optimizations
 COPTIMIZEFLAGS ?=
-CXXOPTIMIZEFLAGS ?= -fstrict-enums -fno-enforce-eh-specs -fabi-version=0
+CXXOPTIMIZEFLAGS ?= -fstrict-enums -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
 ARCHFLAGS := -march=native
 GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings -Wabi \
 	-Wno-unused-parameter -Wno-missing-field-initializers \
@@ -132,6 +132,7 @@ GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings -Wabi \
 	-Wdisabled-optimization \
 	-Wsuggest-attribute=noreturn \
 	-Wdisabled-optimization \
+	-Werror=date-time \
 	-fmax-errors=5
 # TBA when newer GCC is made default:
 #	-Wsuggest-attribute=format
@@ -148,8 +149,9 @@ CXXWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
 	-Werror=conversion-null \
 	-Werror=delete-non-virtual-dtor \
 	-Werror=terminate \
-	-Woverloaded-virtual -Wnon-virtual-dtor
-PIE := 0
+	-Woverloaded-virtual -Wnon-virtual-dtor \
+	-Werror=delete-incomplete
+PIE := 1
 NOPLT := 0
 LTO := 0
 
@@ -371,7 +373,7 @@ AUTO_GENERATED_COMPARE := $(AUTO_GENERATED_EXIST_BAK:%.bak=%)
 compare:
 	$(Q)for x in $(AUTO_GENERATED); do \
 		if [ -f $$x -a -f $$x.bak ] && ! cmp -s $$x.bak $$x; then \
-			colordiff -u $$x.bak $$x | less -R; \
+			colordiff -up $$x.bak $$x | less -R; \
 		fi \
 	done
 
