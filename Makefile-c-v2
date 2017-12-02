@@ -151,7 +151,7 @@ CXXWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
 	-Werror=terminate \
 	-Woverloaded-virtual -Wnon-virtual-dtor \
 	-Werror=delete-incomplete
-PIE := 1
+PIE := 0
 NOPLT := 0
 LTO := 0
 
