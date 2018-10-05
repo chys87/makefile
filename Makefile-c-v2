@@ -100,7 +100,8 @@ OPTIMIZEFLAGS ?= -O2 \
 COPTIMIZEFLAGS ?=
 CXXOPTIMIZEFLAGS ?= -fstrict-enums -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
 ARCHFLAGS := -march=native
-GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings -Wabi \
+# -Wabi
+GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings \
 	-Wno-unused-parameter -Wno-missing-field-initializers \
 	-Wno-sign-compare -Wno-clobbered \
 	-Wformat -Wformat-security -Wmissing-include-dirs -Wfloat-equal \
